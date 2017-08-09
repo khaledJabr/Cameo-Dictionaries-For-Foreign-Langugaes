@@ -1,0 +1,407 @@
+import json
+from io import open
+
+import io
+
+language = "es"
+
+synsetCameoToSubmission = json.load(open("SynsetCameoToSubmission.json","r"))
+
+#print type(synsetCameoToSubmission)
+
+# for key in synsetCameoToSubmission:
+#     print type(synsetCameoToSubmission[key])
+
+
+wordFeedbacks = json.load(open("FeedbackOnSynsetWord.json", "r"))
+
+synsetWords = json.load(open("SynsetWord.json"), "r")
+
+idToSynsetWordMap = {x["id"]: x for x in synsetWords}
+
+count = 0
+
+print len(wordFeedbacks)
+
+filteredWordFeedbacks = []
+
+for entry in wordFeedbacks:
+
+    if entry['idWord'] in idToSynsetWordMap:
+        entry["synset_id"] = idToSynsetWordMap[entry['idWord']]['idSynsetEntry']
+        filteredWordFeedbacks.append(entry)
+    else:
+        count += 1
+
+
+print len(filteredWordFeedbacks)
+
+
+
+submissionToWordfeedbacks = {}
+
+for entry in filteredWordFeedbacks:
+    if entry['submissionId'] not in submissionToWordfeedbacks:
+        submissionToWordfeedbacks[entry['submissionId']] = list()
+    submissionToWordfeedbacks[entry['submissionId']].append(entry)
+
+
+word_stat = {}
+
+for synsetId in synsetCameoToSubmission:
+    for cameoId in synsetCameoToSubmission[synsetId]:
+        if cameoId not in word_stat:
+            word_stat[cameoId]={}
+        for submissionId in synsetCameoToSubmission[synsetId][cameoId]:
+            if submissionId not in submissionToWordfeedbacks:
+                continue
+
+            for feedback in submissionToWordfeedbacks[submissionId]:
+                if feedback['idWord'] not in word_stat[cameoId]:
+                    word_stat[cameoId][feedback['idWord']] = {"correct": 0, "incorrect": 0, "ambiguous": 0}
+                if feedback['verdict'] == "c":
+                    word_stat[cameoId][feedback['idWord']]["correct"] += 1
+                elif feedback['verdict'] == "ic":
+                    word_stat[cameoId][feedback['idWord']]["incorrect"] += 1
+                else:
+                    word_stat[cameoId][feedback['idWord']]["ambiguous"] += 1
+
+#print word_stat
+
+synsetEntryList = json.load(open("SynsetEntry.json","r"))
+
+synsetEntryToWordMap = {x["id"]: x["idWord"] for x in synsetEntryList}
+
+wordList = json.load(open("Word.json", "r"))
+
+#print wordList
+
+print wordList[0]['text']
+wordIdToText ={}
+for i in range(0, len(wordList)):
+#    print wordList[i]
+    if 'text' in wordList[i]:
+        wordIdToText[wordList[i]["id"]] = wordList[i]['text']
+    else:
+        print "ISSUE " +str(wordList[i])
+
+
+cameo_word_translated = {}
+
+for cameoId in word_stat:
+    if cameoId not in cameo_word_translated:
+        cameo_word_translated[cameoId] = {}
+    for synsetWordId in word_stat[cameoId]:
+        synsetWord = idToSynsetWordMap[synsetWordId]
+
+        if word_stat[cameoId][synsetWordId]["correct"] >= word_stat[cameoId][synsetWordId]["incorrect"] + word_stat[cameoId][synsetWordId]["ambiguous"]:
+            wordId = synsetEntryToWordMap[synsetWord["idSynsetEntry"]]
+            wordEN = wordIdToText[wordId]
+            if wordEN not in cameo_word_translated[cameoId]:
+                cameo_word_translated[cameoId][wordEN] = set()
+            cameo_word_translated[cameoId][wordEN].add(synsetWord['word'])
+
+#print cameo_word_translated
+
+# with open("cameo_word_translated.json","w+") as output:
+#     str = json.dumps(cameo_word_translated)
+#     output.write(str)
+#     output.close()
+
+cameoEntryList = json.load(open("CameoEntry.json", "r"))
+
+codeToCameoId = {x['code']: x['id'] for x in cameoEntryList}
+
+cameoRulesList = json.load(open("CameoRule.json","r", encoding='UTF-8'))
+count = 0
+
+listCameoIDs = []
+for key in codeToCameoId:
+     listCameoIDs.append(codeToCameoId[key])
+
+#print sorted(listCameoIDs)
+listCameoIDs = []
+for key in cameo_word_translated:
+    listCameoIDs.append(key)
+#print sorted(listCameoIDs)
+
+
+for x in cameoRulesList:
+    if x["source"] != "CAMEO2":
+        cameoId = str(codeToCameoId[x['cameoCode']])
+        if cameoId in cameo_word_translated:
+            translatedWords = cameo_word_translated[cameoId]
+            if x['word'] in translatedWords:
+                print '- ' +x['ruleText']+'['+x['cameoCode']+'] #'+ ', '.join(translatedWords[x["word"]])
+            else:
+                print '- ' + x['ruleText'] + '[' + x['cameoCode'] + '] #' + "NTA "+x['word']
+            count += 1
+print count
+
+
+#========================================================
+
+
+
+import re
+import json
+from pprint import pprint
+
+
+def get_verb_and_code(line):
+    matcher = regex.search(line)
+    if matcher != None:
+        verb = matcher.group(0).strip().split(" ")[0]
+
+        code = matcher.group(1)
+        if code != None:
+            code = code.replace("[", "").replace("]", "")
+
+        return verb.strip(), code
+    return None, None
+
+
+
+
+cameo_file = open("CAMEO.2.0.txt","r")
+verbs_map = {}
+current_lead_verb = ""
+regex = re.compile("[a-zA-Z ]+(\[[-|[0-9]*\])?")
+for line in cameo_file:
+    line = line.lower()
+    if line.strip() == "":
+        continue
+
+    if line.strip().startswith("---"):
+        verb, code = get_verb_and_code(line)
+        current_lead_verb = verb
+        verbs_map[current_lead_verb]={"code": code, "related_verbs": {}}
+
+
+    elif line.startswith("-") and current_lead_verb != "":
+
+        current_lead_verb  = ""
+    elif current_lead_verb != "":
+        verb, code = get_verb_and_code(line)
+        if verb != None:
+            verbs_map[current_lead_verb]["related_verbs"][verb] = {'code': code}
+        else:
+            print "NOT Inserting"
+
+
+
+print len(verbs_map)
+
+verbs_db = [x for x in json.load(open("Word.json","r"))]
+
+print len(verbs_db)
+
+v_map = {}
+
+for v in verbs_db:
+    if 'text' in v:
+        v_map[v['text']] = v['id']
+
+print v_map['develop']
+count = 0;
+for verb in verbs_map:
+    if verb.lower() in v_map:
+        verbs_map[verb]["id"] = v_map[verb.lower()]
+    else:
+        print verb
+        count += 1
+    for rverb in verbs_map[verb]['related_verbs']:
+
+        if rverb.lower() in v_map:
+            #print rverb
+            #print verbs_map[verb]['related_verbs'][rverb]
+            verbs_map[verb]['related_verbs'][rverb]["id"] = v_map[rverb.lower()]
+        else:
+            print "+", rverb
+            count += 1
+print count
+pprint(verbs_map)
+
+
+word_cameo_rules_map = {}
+
+for x in cameoRulesList:
+    if x["source"] != "CAMEO2":
+        if x['word'] not in word_cameo_rules_map:
+            word_cameo_rules_map[x['word']] = {}
+
+        cameo_rules_map = word_cameo_rules_map.get(x['word'])
+
+        if x['cameoCode'] not in cameo_rules_map:
+            cameo_rules_map[x['cameoCode']] = list()
+
+        cameo_rules_map[x['cameoCode']].append(x['ruleText'])
+
+cameo_es_dictionary = {}
+
+for lead_verb in verbs_map:
+    cameo_rules_map = word_cameo_rules_map.get(lead_verb)
+
+
+    if cameo_rules_map != None:
+        for cameo_code in cameo_rules_map:
+            cameoId = str(codeToCameoId[cameo_code])
+            if cameoId in cameo_word_translated:
+                translatedWords = cameo_word_translated[cameoId]
+                if lead_verb in translatedWords:
+                    if 'translation' not in verbs_map[lead_verb]:
+                        verbs_map[lead_verb]['translation'] = []
+                    for word in translatedWords[lead_verb]:
+                        if len(word.strip()) > 0:
+                            verbs_map[lead_verb]['translation'].append(word.strip().replace(" ","+"))
+                if "translated_rule" not in verbs_map[lead_verb]:
+                    verbs_map[lead_verb]['translated_rule'] = []
+                for rule in cameo_rules_map[cameo_code]:
+                    verbs_map[lead_verb]['translated_rule'].append({"cameoCode": cameo_code, "rule": rule})
+
+    for related_verb in verbs_map[lead_verb]['related_verbs']:
+        cameo_rules_map = word_cameo_rules_map.get(related_verb)
+
+        if cameo_rules_map != None:
+            for cameo_code in cameo_rules_map:
+                cameoId = str(codeToCameoId[cameo_code])
+                if cameoId in cameo_word_translated:
+                    translatedWords = cameo_word_translated[cameoId]
+                    if related_verb in translatedWords:
+                        if 'translation' not in verbs_map[lead_verb]['related_verbs'][related_verb]:
+                            verbs_map[lead_verb]['related_verbs'][related_verb]['translation'] = []
+                        for word in translatedWords[related_verb]:
+                            if len(word.strip()) > 0:
+                                verbs_map[lead_verb]['related_verbs'][related_verb]['translation'].append(word.strip().replace(" ","+"))
+                    if "translated_rule" not in verbs_map[lead_verb]['related_verbs'][related_verb]:
+                        verbs_map[lead_verb]['related_verbs'][related_verb]['translated_rule'] = []
+                    for rule in cameo_rules_map[cameo_code]:
+                        verbs_map[lead_verb]['related_verbs'][related_verb]['translated_rule'].append({"cameoCode": cameo_code, "rule": rule})
+
+
+#json.dump(verbs_map, open("cameo_dict.json","w+"), ensure_ascii=False)
+with io.open("testJson.json",'w',encoding="utf-8") as outfile:
+    outfile.write(unicode(json.dumps(verbs_map, ensure_ascii=False)))
+
+
+cameo_file = open("CAMEO.2.0.txt","r")
+
+cameo_es_file = io.open("CAMEO.es.0.0.4.txt","w+", encoding="UTF-8")
+
+current_lead_verb = ""
+regex = re.compile("[a-zA-Z ]+(\[[-|[0-9]*\])?")
+lead_translations = set()
+all_translations = {}
+
+default_code_map = {}
+
+for line in cameo_file:
+    line = line.lower()
+    if line.strip() == "":
+        continue
+
+    if line.strip().startswith("---"):
+        verb, code = get_verb_and_code(line)
+        current_lead_verb = verb
+        lead_translations.clear()
+        all_translations.clear()
+
+        if 'translation' in verbs_map[current_lead_verb]:
+
+            for tword in verbs_map[current_lead_verb]['translation']:
+                lead_translations.add(tword)
+                if tword not in all_translations:
+                    all_translations[tword] = set()
+                all_translations[tword].add(current_lead_verb)
+
+
+    elif line.startswith("-") and current_lead_verb != "":
+        translated_lead_verb = None
+        if len(lead_translations) > 0:
+            translated_lead_verb = lead_translations.pop()
+            lead_translations.add(translated_lead_verb)
+        elif len(all_translations) > 0:
+            translated_lead_verb = all_translations.keys()[0]
+        if translated_lead_verb is not None:
+            code = default_code_map.get(translated_lead_verb)
+            if code is None:
+                cameo_es_file.write("--- "+translated_lead_verb+" ---\n")
+            else:
+                cameo_es_file.write("--- " + translated_lead_verb + " ["+code+"] ---\n")
+
+            for trans_verb in all_translations:
+                code = default_code_map.get(trans_verb)
+                code_str = ""
+                if code is not None:
+                    code_str = " ["+code+"]"
+                str = "%-20s %-10s %s" % (trans_verb, code_str, "# "+",".join(all_translations[trans_verb])+"\n")
+                cameo_es_file.write(str)
+
+            #PRINT THE RULES
+            trans_rules = set()
+            if "translated_rule" in verbs_map[current_lead_verb]:
+                for rule in verbs_map[current_lead_verb]["translated_rule"]:
+                    if rule['cameoCode']+" "+rule['rule'] not in trans_rules:
+                        associated_verbs = set()
+                        if 'translation' in verbs_map[current_lead_verb]:
+                            for verb in verbs_map[current_lead_verb]['translation']:
+                                associated_verbs.add(verb)
+                            trans_rules.add(rule['cameoCode']+" "+rule['rule'])
+                            str = "%-50s %-10s %s" % ("+ "+rule['rule'], "  ["+rule['cameoCode']+"]", "# "+ ",".join(associated_verbs)+"\n")
+                            cameo_es_file.write(str)
+                            for verb_t in verbs_map[current_lead_verb]['translation']:
+                                default_code_map[verb_t] = rule['cameoCode']
+            for rel_word in verbs_map[current_lead_verb]['related_verbs']:
+                if "translated_rule" in verbs_map[current_lead_verb]['related_verbs'][rel_word]:
+                    for rule in verbs_map[current_lead_verb]['related_verbs'][rel_word]["translated_rule"]:
+                        if rule['cameoCode'] + " " + rule['rule'] not in trans_rules:
+                            associated_verbs = set()
+                            if 'translation' in verbs_map[current_lead_verb]['related_verbs'][rel_word]:
+                                for verb in verbs_map[current_lead_verb]['related_verbs'][rel_word]['translation']:
+                                    associated_verbs.add(verb)
+                                trans_rules.add(rule['cameoCode'] + " " + rule['rule'])
+                                str = "%-50s %-10s %s" % ("+ " + rule['rule'], "  [" + rule['cameoCode'] + "]",
+                                                          "# " + ",".join(associated_verbs) + "\n")
+                                cameo_es_file.write(str)
+                                for verb_t in verbs_map[current_lead_verb]['related_verbs'][rel_word]['translation']:
+                                    if verb_t not in default_code_map:
+                                        default_code_map[verb_t] = rule['cameoCode']
+
+
+        cameo_es_file.write(unicode("\n\n"))
+        current_lead_verb  = ""
+    elif current_lead_verb != "":
+        verb, code = get_verb_and_code(line)
+        if verb != None and verb in verbs_map[current_lead_verb]['related_verbs']:
+            if 'translation' in verbs_map[current_lead_verb]['related_verbs'][verb]:
+                for tword in verbs_map[current_lead_verb]['related_verbs'][verb]['translation']:
+                    if tword not in all_translations:
+                        all_translations[tword] = set()
+                    all_translations[tword].add(verb)
+        else:
+            print "NOT Inserting"
+
+cameo_es_file.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
