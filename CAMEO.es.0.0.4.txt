@@ -777,8 +777,7 @@ SEGUIR                          # CONTINUE
 + * GOLPEANDO                                        [190]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
 + * ATAQUES                                          [190]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
 + * BOMBARDEOS                                       [190]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
-+ * {LA REPRESION}                                     [170]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
-+ *حملة                                              [170]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
++ * {LA REPRESION}                                   [170]    # CONTINUAR,LARGAR,REANUDAR,PERSISTIR,PROLONGARA,RESUMIR,SEGUIR
 + * A TRAVES DE                                      [190]    # ADVANCE,AVANZAR
 + * AVANZAR POR LAS                                  [190]    # ADVANCE,AVANZAR
 + * AVANZAR POR LA                                   [190]    # ADVANCE,AVANZAR
