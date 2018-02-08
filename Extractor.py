@@ -1,7 +1,7 @@
 import json
 from io import open
 
-language = "es"
+language = "ar"
 
 synsetCameoToSubmission = json.load(open("SynsetCameoToSubmission.json","r"))
 
