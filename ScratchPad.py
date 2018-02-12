@@ -1,25 +1,5 @@
-# from io import open
-# import json
-#
-# cameoRulesList = json.load(open("CameoRule.json","r", encoding='UTF-8'))
-# count = 0
-# for x in cameoRulesList:
-#     if x["source"] != "CAMEO2":
-#         print x["ruleText"]
-#         count += 1
-#
-# print count
-#
-# testFileList = json.load(open("Word.json","r", encoding='UTF-8'))
-#
-# for key in testFileList[0]:
-#     print key
-#
+##encoding= utf-8
 
+arabic_part = "عمل_Test ]عة"
 
-import schedule
-
-def job():
-    print "Done in every 10 minutes"
-
-schedule.every().day.at("14:15").do()
+print arabic_part, "[010] Test", arabic_part

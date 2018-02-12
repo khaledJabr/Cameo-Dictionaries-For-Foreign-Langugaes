@@ -1,7 +1,13 @@
 import re
-dict_file = open("CAMEO.es.0.0.5.txt","r")
 
-out_file = open("CAMEO.es.0.0.6.txt", "w+")
+language = "ar"
+
+DATA_FOLDER = "data/"
+OUTPUT_FOLDER = "output/"
+
+dict_file = open(OUTPUT_FOLDER+"CAMEO."+language+".0.0.4.txt","r")
+
+out_file = open(OUTPUT_FOLDER+"CAMEO."+language+".txt", "w+")
 
 
 default_code_map = {}

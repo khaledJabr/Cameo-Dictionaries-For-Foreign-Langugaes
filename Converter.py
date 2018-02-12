@@ -1,6 +1,10 @@
 import json
+language = "ar"
 
-cameoFile = open("Cameo_es_v0.0.1.txt","r")
+DATA_FOLDER = "data/"
+OUTPUT_FOLDER = "output/"
+
+cameoFile = open(OUTPUT_FOLDER+"Cameo_"+language+"_v0.0.1.txt","r")
 
 cameoMap = {}
 
@@ -21,7 +25,7 @@ for line in cameoFile:
 
     cameoMap[cameoCode]["rules"].add(line)
 
-output_file = open("Cameo_es_v0.0.2.txt", "w+")
+output_file = open(OUTPUT_FOLDER+"Cameo_"+language+"_v0.0.2.txt", "w+")
 
 cameoConceptMap = {x["code"]:x ["concept"] for x in json.load(open("CameoEntry.json","r"))}
 
